@@ -4,7 +4,7 @@ Takes an image representing a world view of map consisting of repeating sprites.
 #### Get me started fast:
 
 1. You will need to have downloaded the world map that you want to process and have an available (ideally simple) path to the file.
-2. You will need python version 3.x installed as well as the packages for Numpy, Pandas, and Pillow. (See requirements.txt)
+2. You will need python version 3.x installed as well as the packages for Numpy, Pandas, and Pillow. (See [requirements.txt](https://github.com/pixelatedbrian/sprite_sheet_sharder/blob/master/requirements.txt))
 3. start the script by doing: `python sprite_sheet_sharder.py`
 4. there should be a series of input prompts with basic checking:
 
