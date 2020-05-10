@@ -3,6 +3,9 @@ from PIL import Image
 import numpy as np
 import pandas as pd
 
+GREEN_WIDTH = 256
+GREEN_HEIGHT = 176
+
 def get_inputs():
     '''
     Gets inputs from users to figure out:
@@ -205,29 +208,29 @@ def parse_sprites():
         img = img[1:, 1:, :]
         
         # figure out how many screens there are wide and down
-        horizontal_frames = img.shape[1] // 257
-        vertical_frames = img.shape[0] // 177
+        horizontal_frames = img.shape[1] // (GREEN_WIDTH + 1)
+        vertical_frames = img.shape[0] // (GREEN_HEIGHT + 1)
         
         # create a placeholder for the clean image
-        clean_img = np.zeros(shape=(vertical_frames * 176, horizontal_frames * 256, 3), dtype=np.uint8)
+        clean_img = np.zeros(shape=(vertical_frames * GREEN_HEIGHT, horizontal_frames * GREEN_WIDTH, 3), dtype=np.uint8)
         
         print("parse_sprites: created a placeholder image in memory of size: ", clean_img.shape)
         
         for idx in range(horizontal_frames):  # walk through the screens left to the right
             for idy in range(vertical_frames):  # walk through the screens top to bottom
-                col_start = idx * 256 + idx
-                col_end = col_start + 256
+                col_start = idx * GREEN_WIDTH + idx
+                col_end = col_start + GREEN_WIDTH
 
-                row_start = idy * 176 + idy
-                row_end = row_start + 176
+                row_start = idy * GREEN_HEIGHT + idy
+                row_end = row_start + GREEN_HEIGHT
 
                 snip = img[row_start:row_end, col_start:col_end, :3]
 
-                clean_col_start = idx * 256
-                clean_col_end = (idx + 1) * 256
+                clean_col_start = idx * GREEN_WIDTH
+                clean_col_end = (idx + 1) * GREEN_WIDTH
 
-                clean_row_start = idy * 176
-                clean_row_end = (idy + 1) * 176
+                clean_row_start = idy * GREEN_HEIGHT
+                clean_row_end = (idy + 1) * GREEN_HEIGHT
 
                 clean_img[clean_row_start:clean_row_end, clean_col_start:clean_col_end, :] = snip
                 
@@ -374,6 +377,8 @@ def parse_sprites():
         
         diffs = np.array(constructed_image, dtype=float) - np.array(clean_img, dtype=float)
         
+        diffs = diffs**2 # numpy will broadcast this operation and each individual value will be squared in place
+        
         diffs = int(np.sum(diffs))
         
         if diffs == 0:
@@ -390,5 +395,6 @@ def parse_sprites():
     
 if __name__ == "__main__":
     
-  parse_sprites()
+    # run the script if triggered via command line
+    parse_sprites()
 
