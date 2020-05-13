@@ -3,11 +3,12 @@ from PIL import Image
 import numpy as np
 import pandas as pd
 
+SKIP_GREEN = True
 GREEN_WIDTH = 256
 GREEN_HEIGHT = 176
 
-def get_inputs():
-    '''
+def get_inputs(skip_green=True):
+    '''    
     Gets inputs from users to figure out:
     * what file to load
     * remove green lines
@@ -15,6 +16,9 @@ def get_inputs():
     * remove signature for files from: https://www.spriters-resource.com/fullview/119176/
     * output file name
     * integration validation test
+    
+    INPUTS:
+    skip_green: boolean that if true it will skip the remove green lines question
     '''
     
     rules = {}
@@ -33,29 +37,36 @@ def get_inputs():
             
         else:
             print("    There was some kind of error in the input, did you specify a '.png' or '.jpg' file?")
-            
-    go = True
-    count = 0
     
-    while go is True and count < 100:
-        
-        # remove green lines?
-        _input = input("remove green screen lines? (usually screen indicators): y/n/?   ")
-        
-        if _input == "?":
-            print("some maps have line padding to indicate screens.\n For example: https://www.spriters-resource.com/fullview/119176/\n")
+    ############################################################################
+    ### SKIP GREEN LINE QUESTION BY DEFAULT AS MOST WEBSITES DON'T HAVE THEM ###
+    ############################################################################
+    if skip_green is False:
+        go = True
+        count = 0
+
+        while go is True and count < 100:
+
+            # remove green lines?
+            _input = input("remove green screen lines? (usually screen indicators): y/n/?   ")
+
+            if _input == "?":
+                print("some maps have line padding to indicate screens.\n For example: https://www.spriters-resource.com/fullview/119176/\n")
+
+            elif _input.lower() == "y":
+                rules["green_lines"] = True
+                go = False
+
+                print("    ok, will attempt to remove green lines")
+
+            elif _input.lower() == "n":
+                rules["green_lines"] = False
+                go = False
+
+                print("   ok, skipping removing green lines")
             
-        elif _input.lower() == "y":
-            rules["green_lines"] = True
-            go = False
-            
-            print("    ok, will attempt to remove green lines")
-            
-        elif _input.lower() == "n":
-            rules["green_lines"] = False
-            go = False
-            
-            print("   ok, skipping removing green lines")
+    else:
+        rules["green_lines"] = False
             
     go = True
     count = 0
@@ -189,7 +200,7 @@ def parse_sprites():
     
     print("parse_sprites: get the inputs for how this script should run")
     
-    rules = get_inputs()
+    rules = get_inputs(skip_green=SKIP_GREEN)
     
     OUT_CSV = "{:}.csv".format(rules["output_path"])
     OUT_PIC = "{:}.png".format(rules["output_path"])
@@ -197,9 +208,14 @@ def parse_sprites():
     print("parse_sprites: inputs gathered")
     print("parse_sprites: Loading image: {:}".format(rules["file"]))
         
-    img = np.array(Image.open(rules["file"]))
+    # try to load the image and throw better errors if the img load fails:
+    # added explicit conversion to RGB because of single channel pallete mapped PNGs
+    img = Image.open(rules["file"]).convert('RGB')
     
-    print("parse_sprites: Loaded image.")
+    # conver the image to a 3D matrix to ease manipulation in code
+    img = np.array(img)
+            
+    print("parse_sprites: Loaded image with shape: ", img.shape)
     
     if rules["green_lines"] is True:
         
@@ -252,20 +268,26 @@ def parse_sprites():
     else:
         print("parse_sprites: skipping trying to remove the signature")
     
+    #########################################################################
+    ### AT THIS POINT 'img' = 'clean_img' IF 'clean_img' WAS EVER CREATED ###
+    ### SO THE CODE BELOW SHOULDN'T HAVE 'clean_img'                      ###
+    #########################################################################
+    
     # prepare to start walking the image using the sprite pixel size
     START_COL = 0
     START_ROW = 0
 
     SPRITE_SIZE = rules["sprite_size"]
     
-    COL_STEPS = clean_img.shape[1] // SPRITE_SIZE
-    ROW_STEPS = clean_img.shape[0] // SPRITE_SIZE
+    COL_STEPS = img.shape[1] // SPRITE_SIZE
+    ROW_STEPS = img.shape[0] // SPRITE_SIZE
 
     END_COL = START_COL + COL_STEPS
     END_ROW = START_ROW + ROW_STEPS
 
-    temp_img = img[START_ROW * SPRITE_SIZE:END_ROW * SPRITE_SIZE,
-                   START_COL * SPRITE_SIZE:END_COL * SPRITE_SIZE, :]
+#     temp_img = img[START_ROW * SPRITE_SIZE:END_ROW * SPRITE_SIZE,
+#                    START_COL * SPRITE_SIZE:END_COL * SPRITE_SIZE, :]
+    temp_img = img
 
     sprite_dict = {} # mapping of numbers and images
     
@@ -375,7 +397,7 @@ def parse_sprites():
         
         print("now compare the pixel values of the original img (stripped of greenlines if applicable) and the reconstructed image")
         
-        diffs = np.array(constructed_image, dtype=float) - np.array(clean_img, dtype=float)
+        diffs = np.array(constructed_image, dtype=float) - np.array(img, dtype=float)
         
         diffs = diffs**2 # numpy will broadcast this operation and each individual value will be squared in place
         
@@ -393,8 +415,8 @@ def parse_sprites():
     else:
         print("skipping validation testing. Script complete!")
     
-if __name__ == "__main__":
+# if __name__ == "__main__":
     
-    # run the script if triggered via command line
+    
     parse_sprites()
 
